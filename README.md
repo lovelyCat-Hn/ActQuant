@@ -1,6 +1,22 @@
+<div align="center">
+
 # ActQuant
 
-Official implementation of **"ActQuant: Sub-4-bit Action-Guided Quantization for Vision-Language-Action Models"** ([arXiv:2605.24011](https://arxiv.org/abs/2605.24011)).
+### Sub-4-bit Action-Guided Quantization for Vision-Language-Action Models
+
+[![arXiv](https://img.shields.io/badge/arXiv-2605.24011-b31b1b.svg)](https://arxiv.org/abs/2605.24011)
+[![Project Page](https://img.shields.io/badge/Project-Page-1f6feb.svg)](https://actquant.github.io)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+**[Paper](https://arxiv.org/abs/2605.24011)** &nbsp;·&nbsp;
+**[Project Page](https://actquant.github.io)** &nbsp;·&nbsp;
+**[Code](https://github.com/arashakb/ActQuant)**
+
+</div>
+
+---
+
+Official implementation of **"ActQuant: Sub-4-bit Action-Guided Quantization for Vision-Language-Action Models."**
 
 ActQuant is a two-stage post-training quantization recipe specialized for
 Vision-Language-Action (VLA) models. It produces sub-4-bit checkpoints that
