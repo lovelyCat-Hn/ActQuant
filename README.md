@@ -4,15 +4,12 @@
 
 ### Sub-4-bit Action-Guided Quantization for Vision-Language-Action Models
 
-[![arXiv](https://img.shields.io/badge/arXiv-2605.24011-b31b1b.svg)](https://arxiv.org/abs/2605.24011)
-[![Project Page](https://img.shields.io/badge/Project-Page-1f6feb.svg)](https://actquant.github.io)
-[![HuggingFace](https://img.shields.io/badge/HuggingFace-Checkpoints-ffd21e.svg)](https://huggingface.co/NU-World-Model-Embodied-AI/ActQuant-Pi05-LIBERO-3bpw)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-**[Paper](https://arxiv.org/abs/2605.24011)** &nbsp;·&nbsp;
-**[Project Page](https://actquant.github.io)** &nbsp;·&nbsp;
-**[Checkpoints](https://huggingface.co/NU-World-Model-Embodied-AI/ActQuant-Pi05-LIBERO-3bpw)** &nbsp;·&nbsp;
-**[Code](https://github.com/arashakb/ActQuant)**
+<p>
+<a href="https://arxiv.org/abs/2605.24011"><img src="https://img.shields.io/badge/arXiv-2605.24011-b31b1b?style=for-the-badge&logo=arxiv&logoColor=white" alt="arXiv"></a>
+<a href="https://actquant.github.io"><img src="https://img.shields.io/badge/Project_Page-1f6feb?style=for-the-badge&logo=githubpages&logoColor=white" alt="Project Page"></a>
+<a href="https://huggingface.co/NU-World-Model-Embodied-AI/ActQuant-Pi05-LIBERO-3bpw"><img src="https://img.shields.io/badge/HuggingFace-Checkpoints-ffd21e?style=for-the-badge&logo=huggingface&logoColor=black" alt="HuggingFace"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-3da639?style=for-the-badge" alt="License: MIT"></a>
+</p>
 
 </div>
 

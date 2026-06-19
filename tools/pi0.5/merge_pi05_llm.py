@@ -41,14 +41,18 @@ from pathlib import Path
 from gguf import GGUFReader, GGUFWriter, GGMLQuantizationType
 
 
-# Tensors in the standalone LLM GGUF that don't belong in pi05.gguf
-_LLM_SKIP = {"output.weight", "output_norm.weight"}
+# Tensors in the standalone LLM GGUF that don't belong in pi05.gguf.
+# By default, token_embd is also skipped — the merged file keeps the base
+# pi05's embedding (which is intentional: the base usually ships embed at a
+# TextEmbed-supported type like Q8_0 or Q4_K). This is the behavior used
+# to produce the published ActQuant LIBERO checkpoints.
+_LLM_SKIP_DEFAULT = {"token_embd.weight", "output.weight", "output_norm.weight"}
 
-# Standalone-LLM tensors that map to top-level pi05 tensor names (not pali.blk.*).
-# token_embd → embed lets us route a quantized embedding through merge so the
-# output file's embed has a TextEmbed-supported type (Q4_K when llama-quantize
-# is called with --token-embedding-type Q4_K). Otherwise the merged file
-# inherits the base's embed (often Q2_K), which the C++ TextEmbed rejects.
+# Opt-in routing for the case where the base GGUF ships an unsupported embed
+# (e.g. Q2_K, which the C++ TextEmbed rejects). Enabled via --use-llm-embed
+# on the command line; the standalone LLM is then expected to have been
+# produced with `llama-quantize --token-embedding-type Q4_K` (or any other
+# TextEmbed-supported quant type).
 _LLM_TOPLEVEL_REMAP = {
     "token_embd.weight": "embed.weight",
 }
@@ -59,14 +63,18 @@ _LLM_TOPLEVEL_REMAP = {
 _LLM_SKIP_NORMS = {".attn_norm.weight", ".ffn_norm.weight"}
 
 
-def llm_name_to_pali(name: str) -> str | None:
+def llm_name_to_pali(name: str, use_llm_embed: bool = False) -> str | None:
     """
     Convert a standalone LLM tensor name (blk.*) to pi05.gguf pali.blk.* name.
     Returns None for tensors that should be skipped.
+
+    `use_llm_embed=True` opts into routing token_embd.weight from the LLM into
+    the merged file's embed.weight (overriding whatever the base ships).
     """
-    if name in _LLM_SKIP:
+    skip = _LLM_SKIP_DEFAULT - {"token_embd.weight"} if use_llm_embed else _LLM_SKIP_DEFAULT
+    if name in skip:
         return None
-    if name in _LLM_TOPLEVEL_REMAP:
+    if use_llm_embed and name in _LLM_TOPLEVEL_REMAP:
         return _LLM_TOPLEVEL_REMAP[name]
     if not name.startswith("blk."):
         return None
@@ -173,7 +181,8 @@ def _copy_field(writer: GGUFWriter, key: str, field):
         pass
 
 
-def merge(base_path: str, llm_path: str, output_path: str, quant_type: str | None):
+def merge(base_path: str, llm_path: str, output_path: str, quant_type: str | None,
+          use_llm_embed: bool = False):
     print(f"Reading base GGUF: {base_path}")
     base = GGUFReader(base_path, "r")
 
@@ -183,7 +192,7 @@ def merge(base_path: str, llm_path: str, output_path: str, quant_type: str | Non
     # Build lookup: pali.blk.* name → LLM tensor (keyed by llm tensor name)
     llm_tensors: dict[str, object] = {}
     for t in llm.tensors:
-        pali_name = llm_name_to_pali(t.name)
+        pali_name = llm_name_to_pali(t.name, use_llm_embed=use_llm_embed)
         if pali_name is not None:
             llm_tensors[pali_name] = t
 
@@ -251,6 +260,16 @@ if __name__ == "__main__":
                         help="Quantized standalone LLM GGUF (blk.* naming from llama-quantize)")
     parser.add_argument("--output", required=True,
                         help="Output path for merged pi05_<quant>.gguf")
+    parser.add_argument("--use-llm-embed", action="store_true",
+                        help="Route token_embd from the standalone LLM into the merged "
+                             "file's embed.weight (overriding the base). Use this only "
+                             "when the base GGUF ships an embed in a type the C++ "
+                             "TextEmbed runtime rejects (e.g. Q2_K). In that case the "
+                             "LLM must have been produced with "
+                             "`llama-quantize --token-embedding-type Q4_K` (or any "
+                             "supported quant type). Default off — the merged file "
+                             "keeps the base's embed, which is what produces the "
+                             "published ActQuant LIBERO checkpoints.")
     parser.add_argument("--quant-type", default=None,
                         help="Quant type string to record in pi05.quant_llm metadata (e.g. IQ2_XS)")
     args = parser.parse_args()
