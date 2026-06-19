@@ -18,6 +18,16 @@
 
 ---
 
+## News
+
+- **[Jun 19, 2026]** Initial code release — official implementation of ActQuant.
+- **[Jun 19, 2026]** First quantized checkpoint released on HuggingFace: [`ActQuant-Pi05-LIBERO-3bpw`](https://huggingface.co/NU-World-Model-Embodied-AI/ActQuant-Pi05-LIBERO-3bpw).
+- **[May 2026]** Paper available on arXiv: [arXiv:2605.24011](https://arxiv.org/abs/2605.24011).
+
+---
+
+## Overview
+
 Official implementation of **"ActQuant: Sub-4-bit Action-Guided Quantization for Vision-Language-Action Models."**
 
 ActQuant is a two-stage post-training quantization recipe specialized for
