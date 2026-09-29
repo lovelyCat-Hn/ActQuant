@@ -2639,6 +2639,14 @@ static bool check_node_graph_compatibility_and_refresh_copy_ops(ggml_backend_cud
     // Loop over nodes in GGML graph to obtain info needed for CUDA graph
     cuda_ctx->cuda_graph->cpy_dest_ptrs.clear();
 
+    // [ACTQUANT-JETSON] optional diagnostics: set GGML_CUDA_GRAPH_PROBE=1 to report, once
+    // per graph check, why a graph is (not) eligible for CUDA graph capture.
+    static const bool graph_probe = (getenv("GGML_CUDA_GRAPH_PROBE") != nullptr);
+    const char * probe_reason = nullptr;
+    int probe_node_idx = -1;
+    const char * probe_node_name = nullptr;
+    enum ggml_op probe_op = GGML_OP_NONE;
+
     const std::string gemma3n_per_layer_proj_src0_name = "inp_per_layer_selected";
     const std::string gemma3n_per_layer_proj_src1_name = "per_layer_proj";
     const std::string ffn_moe_gate_bias_prefix = "ffn_moe_gate_biased";
@@ -2656,6 +2664,7 @@ static bool check_node_graph_compatibility_and_refresh_copy_ops(ggml_backend_cud
 
         if (node->src[0] && node->src[0]->buffer && ggml_backend_buft_is_cuda_split(node->src[0]->buffer->buft)) {
             use_cuda_graph = false; // Split buffers are not supported by CUDA graph capture
+            if (graph_probe && !probe_reason) { probe_reason = "split_buffer"; probe_node_idx = i; probe_node_name = node->name; probe_op = node->op; } // [GRAPH-PROBE]
 #ifndef NDEBUG
             GGML_LOG_DEBUG("%s: disabling CUDA graphs due to split buffer\n", __func__);
 #endif
@@ -2663,6 +2672,7 @@ static bool check_node_graph_compatibility_and_refresh_copy_ops(ggml_backend_cud
 
         if (node->op == GGML_OP_MUL_MAT_ID && node->ne[2] != 1) {
             use_cuda_graph = false; // This node type is not supported by CUDA graph capture
+            if (graph_probe && !probe_reason) { probe_reason = "mul_mat_id_batch"; probe_node_idx = i; probe_node_name = node->name; probe_op = node->op; } // [GRAPH-PROBE]
 #ifndef NDEBUG
             GGML_LOG_DEBUG("%s: disabling CUDA graphs due to unsupported node type\n", __func__);
 #endif
@@ -2682,7 +2692,14 @@ static bool check_node_graph_compatibility_and_refresh_copy_ops(ggml_backend_cud
             // https://github.com/ggml-org/llama.cpp/blob/f9a31eea06a859e34cecb88b4d020c7f03d86cc4/src/llama-model.cpp#L10199-L10241 and
             // https://github.com/huggingface/transformers/blob/bda75b4011239d065de84aa3e744b67ebfa7b245/src/transformers/models/gemma3n/modeling_gemma3n.py#L1773,
             // Generally, changes in batch size or context size can cause changes to the grid size of some kernels.
-            use_cuda_graph = false;
+            // [ACTQUANT-JETSON] pi0.5 graphs have fully static shapes per session; ggml's
+            // is_cuda_graph_update_required() re-captures on any change, so batch>1 ADD is safe here.
+            // Opt-in via GGML_CUDA_GRAPH_ALLOW_BATCH=1 (default: upstream behavior).
+            static const bool actquant_allow_batch_add = (getenv("GGML_CUDA_GRAPH_ALLOW_BATCH") != nullptr);
+            if (!actquant_allow_batch_add) {
+                use_cuda_graph = false;
+                if (graph_probe && !probe_reason) { probe_reason = "add_batch_gt1"; probe_node_idx = i; probe_node_name = node->name; probe_op = node->op; } // [GRAPH-PROBE]
+            }
 #ifndef NDEBUG
             GGML_LOG_DEBUG("%s: disabling CUDA graphs due to batch size > 1 [%s] [%ld %ld %ld %ld]\n", __func__, node->name, node->ne[0], node->ne[1], node->ne[2], node->ne[3]);
 #endif
@@ -2698,6 +2715,7 @@ static bool check_node_graph_compatibility_and_refresh_copy_ops(ggml_backend_cud
             void * ptr = ggml_cuda_cpy_fn(node->src[0], node->src[1]);
             if (!ptr) {
                 use_cuda_graph = false;
+                if (graph_probe && !probe_reason) { probe_reason = "unsupported_cpy"; probe_node_idx = i; probe_node_name = node->name; probe_op = node->op; } // [GRAPH-PROBE]
 #ifndef NDEBUG
                 GGML_LOG_DEBUG("%s: disabling CUDA graphs due to unsupported copy op\n", __func__);
 #endif
@@ -2713,6 +2731,16 @@ static bool check_node_graph_compatibility_and_refresh_copy_ops(ggml_backend_cud
         cuda_ctx->cuda_graph->use_cpy_indirection = true;
         // copy pointers to GPU so they can be accessed via indirection within CUDA graph
         ggml_cuda_cpy_dest_ptrs_copy(cuda_ctx->cuda_graph.get(), cuda_ctx->cuda_graph->cpy_dest_ptrs.data(), cuda_ctx->cuda_graph->cpy_dest_ptrs.size(), cuda_ctx->stream());
+    }
+
+    // [ACTQUANT-JETSON]
+    if (graph_probe) {
+        fprintf(stderr, "[GRAPH-PROBE] n_nodes=%d capture=%s reason=%s bail_node=%d op=%s tensor=%s\n",
+                cgraph->n_nodes, use_cuda_graph ? "YES" : "NO",
+                probe_reason ? probe_reason : "-",
+                probe_node_idx,
+                probe_reason ? ggml_op_name(probe_op) : "-",
+                probe_node_name ? probe_node_name : "-");
     }
 
     return use_cuda_graph;
