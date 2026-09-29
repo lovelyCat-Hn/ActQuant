@@ -4,7 +4,7 @@
 #   模型布局: <根目录>/{fp16_eval,q80_eval,q4k_eval,iq2xs_eval}/
 #             各含 pi05.gguf + norm_stats.json + tokenizer.model
 #             以及 <根目录>/test_imgs/cmp_s*.png
-#   二进制路径默认 $HOME/Quant_ws/ActQuant/build_openpi/bin/pi05
+#   二进制路径默认 <本仓库>/build_openpi/bin/pi05（按脚本位置推导）
 #   可用环境变量覆盖: BIN=/path/to/pi05 bash bench_jetson.sh ...
 # 计时建议(否则波动大):
 #   sudo nvpmodel -m 0 && sudo jetson_clocks
@@ -12,7 +12,7 @@ set -e
 
 MODELS=${1:?用法: bash bench_jetson.sh <模型根目录> [轮数]}
 N=${2:-3}
-BIN=${BIN:-$HOME/Quant_ws/ActQuant/build_openpi/bin/pi05}
+BIN=${BIN:-$(cd "$(dirname "$0")" && pwd)/../build_openpi/bin/pi05}
 IMGS=$MODELS/test_imgs
 OUT=$MODELS/bench_results
 mkdir -p "$OUT"
