@@ -15,6 +15,25 @@
 
 ---
 
+## Jetson (AGX Orin) port
+
+This fork carries a validated Jetson port of the pi0.5 runtime (AGX Orin,
+JetPack 5.1.3 / L4T R35.6, CUDA 11.4, sm_87):
+
+- CUDA graph capture fix for pi0.5's batch>1 ADD nodes (`GGML_CUDA_GRAPH_ALLOW_BATCH=1`)
+  plus capture diagnostics (`GGML_CUDA_GRAPH_PROBE=1`) — see `ggml-cuda.cu`.
+- `-o/--output` flag on the `pi05` CLI to dump action chunks for offline comparison.
+- `acquant_gguf/` — end-to-end Jetson evaluation kit: build recipe, fresh-process
+  speed benchmark, and fp16-vs-quantized accuracy comparison.
+
+See [`acquant_gguf/README_jetson.md`](acquant_gguf/README_jetson.md) for the
+build recipe and on-device benchmark results (steady-state 360–382 ms/request
+across fp16/Q8_0/Q4_K/IQ2_XS tiers).
+
+> Forked from [arashakb/ActQuant](https://github.com/arashakb/ActQuant) (MIT).
+
+---
+
 ## News
 
 - **[Jun 19, 2026]** Initial code release — official implementation of ActQuant.
