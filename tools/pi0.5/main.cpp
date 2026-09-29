@@ -40,6 +40,7 @@ int main(int argc, char **argv) {
     std::string device_name = "CPU";
     int n_threads = 4;
     int num_steps = 10;
+    std::string output_path = "";
 
     app.add_option("-m,--model_dir", model_dir,
                    "Directory containing model files")->required();
@@ -57,6 +58,9 @@ int main(int argc, char **argv) {
                    "Number of threads (default: 4)");
     app.add_option("-s,--steps", num_steps,
                    "Flow matching steps (default: 10)");
+    app.add_option("-o,--output", output_path,
+                   "Write the full action chunk to this file as raw float32 "
+                   "(action_dim x action_horizon values)");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -101,6 +105,17 @@ int main(int argc, char **argv) {
 
         const auto &config = pi0.config();
         print_actions(actions, config.action.action_dim, config.action.action_horizon);
+
+        if (!output_path.empty()) {
+            FILE *f = fopen(output_path.c_str(), "wb");
+            if (!f) {
+                fprintf(stderr, "Error: cannot open %s for writing\n", output_path.c_str());
+                return 1;
+            }
+            size_t n = fwrite(actions.data(), sizeof(float), actions.size(), f);
+            fclose(f);
+            printf("Actions written: %s (%zu float32 values)\n", output_path.c_str(), n);
+        }
 
         printf("\nInference completed successfully.\n");
 
