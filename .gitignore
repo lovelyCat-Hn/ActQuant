@@ -33,3 +33,5 @@ tools/fisher-diag/action_analysis_out/
 .claude/
 .envrc
 *.local
+# Eval kit run outputs (regenerate with bench_jetson.sh)
+acquant_gguf/bench_results/
